@@ -1,0 +1,192 @@
+% RESUMES START
+% RESUMES: MechE, CS
+% RESUMES END
+
+\documentclass[letterpaper,11pt]{article}
+
+\usepackage{latexsym}
+\usepackage[empty]{fullpage}
+\usepackage{titlesec}
+\usepackage{marvosym}
+\usepackage[usenames,dvipsnames]{color}
+\usepackage{verbatim}
+\usepackage{enumitem}
+\usepackage[pdftex]{hyperref}
+\usepackage{fancyhdr}
+
+\pagestyle{fancy}
+\fancyhf{} 
+\fancyfoot{}
+\renewcommand{\headrulewidth}{0pt}
+\renewcommand{\footrulewidth}{0pt}
+
+\addtolength{\oddsidemargin}{-0.375in}
+\addtolength{\evensidemargin}{-0.375in}
+\addtolength{\textwidth}{1in}
+\addtolength{\topmargin}{-.5in}
+\addtolength{\textheight}{1.0in}
+
+\urlstyle{same}
+
+\raggedbottom
+\raggedright
+\setlength{\tabcolsep}{0in}
+
+\titleformat{\section}{
+  \vspace{-4pt}\scshape\raggedright\large
+}{}{0em}{}[\color{black}\titlerule \vspace{-5pt}]
+
+% Custom commands
+\newcommand{\resumeItem}[2]{
+  \item\small{
+    \textbf{#1}{: #2 \vspace{-2pt}}
+  }
+}
+
+
+\newcommand{\resumeSubheading}[4]{
+  \vspace{-1pt}\item
+    \begin{tabular*}{0.97\textwidth}{l@{\extracolsep{\fill}}r}
+      \textbf{#1} & #2 \\
+      \textit{\small#3} & \textit{\small #4} \\
+    \end{tabular*}\vspace{-5pt}
+}
+
+
+\newcommand{\resumeSubItem}[2]{\resumeItem{#1}{#2}\vspace{-4pt}}
+\renewcommand{\labelitemii}{$\circ$}
+\newcommand{\resumeSubHeadingListStart}{\begin{itemize}[leftmargin=*,label={}]}
+\newcommand{\resumeSubHeadingListEnd}{\end{itemize}}
+\newcommand{\resumeItemListStart}{\begin{itemize}[label={\textbullet}]}
+\newcommand{\resumeItemListEnd}{\end{itemize}\vspace{-5pt}}
+
+
+\begin{document}
+
+%----------HEADING-----------------
+%Res:{*}[
+\begin{tabular*}{\textwidth}{l@{\extracolsep{\fill}}r}
+  %Res:{*}[
+  \textbf{\Large John Smith} & Email : \href{mailto:john.smith@example.com}{john.smith@example.com}\\
+  123 Main St, Anytown, USA & Mobile : (123) 456-7890 \\
+  %]
+  %Res:{*}-{MechE}[
+  \href{https://github.com/johnsmith}{github.com/johnsmith}
+  %]
+\end{tabular*}
+%]
+
+%-----------EDUCATION-----------------
+%Res:{*}[
+\section{Education}
+  \resumeSubHeadingListStart
+    %Res:{*}[
+    \resumeSubheading
+      {Generic University}{Anytown, USA}
+      {Bachelor of Science, Major in Computer Science; GPA: 3.5}{Expected 2024}
+    %] 
+    %Res:{MechE}[
+    \resumeSubheading
+      {Generic University}{Anytown, USA}
+      {Bachelor of Science, Major in Mechanical Engineering; GPA: 3.5}{Expected 2024}
+    %]
+  \resumeSubHeadingListEnd
+%]
+
+%-----------TECHNICAL EXPERIENCE-----------------
+%Res:{*}[
+\section{Technical Experience}
+  \resumeSubHeadingListStart
+    %Res:{*}[
+    \resumeSubheading
+      {University Department}{Anytown, USA}
+      {September 2020 - Present}{}
+      \resumeItemListStart
+        %Res:{CS}[
+        \resumeItem{Software Development}
+          {Developed well-structured and maintainable code.}
+        \resumeItem{Data Handling}
+          {Worked with databases and data management techniques.}
+        \resumeItem{Basic Algorithms}
+          {Implemented and analyzed basic algorithms for problem-solving.}
+        \resumeItem{Project Collaboration}
+          {Participated in team projects using version control systems.}
+        %]
+      \resumeItemListEnd
+    %]
+    %Res:{MechE}[
+    \resumeSubheading
+      {University Department}{Anytown, USA}
+      {September 2020 - Present}{}
+      \resumeItemListStart
+        %Res:{*}[
+        \resumeItem{Design Projects}
+          {Worked on various design projects, focusing on CAD and prototyping.}
+        \resumeItem{Manufacturing Processes}
+          {Gained experience in manufacturing processes and quality control.}
+        \resumeItem{Team Collaboration}
+          {Collaborated with teams on engineering projects, applying design principles.}
+        %]
+      \resumeItemListEnd
+    %]
+  \resumeSubHeadingListEnd
+%]
+
+%-----------WORK EXPERIENCE-----------------
+%Res:{*}[
+\section{Work Experience}
+  \resumeSubHeadingListStart
+    \resumeSubheading
+      {Company Name}{City, State}
+      {June 2021 - Present}{}
+      \resumeItemListStart
+        %Res:{*}[
+        \resumeItem{Design Assistance}
+          {Contributed to design improvements and assisted in project tasks.}
+        \resumeItem{Product Support}
+          {Provided support for product manufacturing and quality control.}
+        %]
+      \resumeItemListEnd
+  \resumeSubHeadingListEnd
+%]
+
+%-----------PERSONAL PROJECTS-----------------
+%Res:{*}[
+\section{Personal Projects}
+  \resumeSubHeadingListStart
+    %Sort:{MechE: 1, CS:2}[
+    \resumeSubItem{Car Project}
+      {Worked on a car project involving design and assembly.}
+    %]
+    %Sort:{MechE: 2, CS:1}[
+    \resumeSubItem{Game Project}
+      {Developed a basic game as a programming exercise.}
+    %]
+  \resumeSubHeadingListEnd
+%]
+
+%-----------SKILLS-----------------
+%Res:{*}[
+\section{Skills}
+  \resumeSubHeadingListStart
+    %Res:{*}[
+    \resumeSubItem{Languages}
+        {Java, Python, C++}
+    %]
+    %Res:{*}-{MechE}[
+    \resumeSubItem{Tools}
+        {Version Control, Basic Debugging, Testing}
+    %]
+  \resumeSubHeadingListEnd
+%]
+
+%-----------ACTIVITIES-----------------
+%Res:{*}[
+\section{Activities}
+  \resumeSubHeadingListStart
+    \resumeSubItem{Club Member}
+      {Active participant in campus clubs and activities.}
+  \resumeSubHeadingListEnd
+%]
+
+\end{document}

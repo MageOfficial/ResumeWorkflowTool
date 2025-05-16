@@ -1,11 +1,11 @@
 const fs = require('fs');
-const mainFile = 'main.tex';
+const mainFile = 'mainexample.tex';
 
 //Parses a line's tags in each resume for sorting and filtering
 // %Res: {include} - {exclude} Sort: {key:value, ...}
 function parseTagLine(line) {
   const match = line.match(
-    /^%(?:(Res):\s*\{([^}]*)\}(?:\s*-\s*\{([^}]*)\})?)?\s*(?:(Sort):\s*\{([^}]*)\})?\s*\[\s*$/
+    /^%(?:(Res):\s*\{([^}]*)\}(?:\s*-\s*\{([^}]*)\})?)?\s*(?:(Sort):\s*\{([^}]*)\})?\s*/
   );
   if (!match) return null;
 
