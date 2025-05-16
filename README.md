@@ -1,7 +1,10 @@
 # Resume Filter and Sorter for LaTeX Documents
 
 This Node.js script processes a single LaTeX resume source file (`main.tex`) and generates multiple resume versions based on inline filtering and sorting annotations. 
-This is to help automate resume customization for different audiences. Ex: You want to apply to two different types of jobs that have similar skills in some areas but some of the skills are irrelevant to each other.
+
+This is to help automate resume customization for different audiences. 
+
+Ex: You want to apply to two different types of jobs that have similar skills in some areas, but some of the skills are irrelevant to each other. Now you can change all your different resumes from just one location and easily create more resumes.
 
 ## Features
 
