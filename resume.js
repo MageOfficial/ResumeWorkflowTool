@@ -23,7 +23,6 @@ for (let line of content) {
 
 if (!resumes.length) throw 'No RESUMES: line found'
 
-// Init output for each resume
 let outputs = {}
 for (let r of resumes) outputs[r] = []
 
@@ -46,7 +45,6 @@ for (let i = 0; i < content.length; i++) {
     if (!tagMatch) continue
     nextTag = tagMatch[1].trim()
 
-    // collect block
     let block = []
     i++
     while (i < content.length) {
@@ -56,7 +54,7 @@ for (let i = 0; i < content.length; i++) {
       block.push(l)
       i++
     }
-    i-- // back up one line
+    i--
 
     for (let r of resumes) {
       if (checkTag(nextTag, r)) outputs[r].push(...block)
@@ -67,7 +65,6 @@ for (let i = 0; i < content.length; i++) {
   }
 }
 
-// Write output
 for (let r of resumes) {
   const name = r.replace(/\s+/g, '_') + '.tex'
   fs.writeFileSync(outputDir + name, outputs[r].join('\n'))
