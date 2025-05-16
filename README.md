@@ -76,7 +76,7 @@ Resumes/         # Output directory for generated .tex files
 
 ### Example
 
-and example file is provided as mainexample.tex
+A generic example file is provided as mainexample.tex
 
 ## License
 
