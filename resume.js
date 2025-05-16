@@ -1,123 +1,170 @@
-const fs = require('fs')
+const fs = require('fs');
+const mainFile = 'main.tex';
 
-const mainFile = 'main.tex'
-const outputDir = './Resumes/'
+//Parses a line's inclusion in each resume
+function parseResTag(line) {
+  const match = line.match(/^%Res:\s*\{([^}]*)\}(?:\s*-\s*\{([^}]*)\})?\s*\[\s*$/);
+  if (!match) return null;
 
-if (!fs.existsSync(outputDir)) fs.mkdirSync(outputDir)
+  const include = match[1].split(',').map(s => s.trim()).filter(Boolean);
+  const exclude = match[2] ? match[2].split(',').map(s => s.trim()).filter(Boolean) : [];
 
-const content = fs.readFileSync(mainFile, 'utf-8').split('\n')
+  return { include, exclude };
+}
 
-// Parse resumes list
-let resumes = []
-let inResumeBlock = false
-for (let line of content) {
-  if (line.trim().startsWith('% RESUMES START')) inResumeBlock = true
-  if (inResumeBlock && line.includes('RESUMES:')) {
-    resumes = line
-      .split(':')[1]
-      .split(',')
-      .map(r => r.trim())
+//Parses a line's sorted order for each resume
+function parseSortTag(line) {
+  const match = line.match(/^%Sort:\s*\{([^}]*)\}\s*\[\s*$/);
+  if (!match) return null;
+
+  const raw = match[1].split(',');
+  let out = {};
+  for (let kv of raw) {
+    let [k, v] = kv.split(':').map(s => s.trim());
+    if (k && v) out[k] = parseInt(v);
   }
-  if (line.trim().startsWith('% RESUMES END')) inResumeBlock = false
+  return out;
 }
 
-if (!resumes.length) throw 'No RESUMES: line found'
-
-let outputs = {}
-for (let r of resumes) outputs[r] = []
-
-function checkTag(tag, resume) {
-  if (!tag) return true
-  const [includeRaw, excludeRaw] = tag.split('-')
-  const includes = includeRaw ? includeRaw.slice(1, -1).split(',').map(s => s.trim()) : ['*']
-  const excludes = excludeRaw ? excludeRaw.slice(1, -1).split(',').map(s => s.trim()) : []
-  const includeAll = includes.length === 1 && includes[0] === '*'
-  return (includeAll || includes.includes(resume)) && !excludes.includes(resume)
+//Creates a block object with resumes and sortMap
+function createBlock(resumes = ['*'], sortMap = {}) {
+  return {
+    resumes: { include: resumes, exclude: [] },
+    sortMap,
+    lines: [],
+  };
 }
 
-function parseSortLine(str) {
-  const out = {}
-  str.split(',').forEach(pair => {
-    const [k, v] = pair.split(':').map(s => s.trim())
-    out[k] = Number(v)
-  })
-  return out
-}
+//Parses the lines of the file into a block tree structure
+function parseLines(lines, startIndex = 0) {
+  const block = createBlock();
+  let i = startIndex;
 
-let blocks = []
-let i = 0
-while (i < content.length) {
-  const line = content[i].trim()
+  while (i < lines.length) {
+    const rawLine = lines[i];
+    const line = rawLine.trim();
 
-  if (line.startsWith('%Res:') || line.startsWith('%Sort:')) {
-    let tag = null
-    let sort = null
-
-    if (line.startsWith('%Res:')) {
-      const tagMatch = line.match(/^%Res:\s*({[^}]+}(?:-\{[^}]+\})?)/)
-      if (tagMatch) tag = tagMatch[1]
-      const sortMatch = line.match(/%Sort:\s*{([^}]+)}/)
-      if (sortMatch) sort = parseSortLine(sortMatch[1])
-    } else {
-      const sortMatch = line.match(/^%Sort:\s*{([^}]+)}/)
-      if (sortMatch) sort = parseSortLine(sortMatch[1])
-      tag = '{*}'
+    //Checks for block end
+    if (line === '%]') {
+      return { block, nextIndex: i + 1 };
     }
 
-    i++
-    let blockLines = []
-    while (
-      i < content.length &&
-      content[i].trim() !== '' &&
-      !content[i].trim().startsWith('%Res:') &&
-      !content[i].trim().startsWith('%Sort:') &&
-      !content[i].trim().toLowerCase().includes("end")
-    ) {
-      blockLines.push(content[i])
-      i++
-    }
-    i--
+    //Checks for block start
+    if (line.startsWith('%Res:') || line.startsWith('%Sort:')) {
+      let resumes = { include: ['*'], exclude: [] };
+      let sortMap = {};
 
-    blocks.push({ tag, sort, lines: blockLines })
-  } 
-  else {
-    // flush accumulated blocks before processing normal line
-    if (blocks.length) {
-      for (let r of resumes) {
-        let included = blocks.filter(b => checkTag(b.tag, r))
-        included.sort((a, b) => {
-          const ap = a.sort && a.sort[r] != null ? a.sort[r] : 1e9
-          const bp = b.sort && b.sort[r] != null ? b.sort[r] : 1e9
-          return ap - bp
-        })
-        for (let b of included) outputs[r].push(...b.lines)
+      if (line.startsWith('%Res:')) {
+        const parsedResumes = parseResTag(line);
+        if (parsedResumes) resumes = parsedResumes;
+      } 
+      else if (line.startsWith('%Sort:')) {
+        const parsedSortMap = parseSortTag(line);
+        if (parsedSortMap) sortMap = parsedSortMap;
       }
-      blocks = []
+
+      //Add lines to the block until it ends
+      const { block: nestedBlock, nextIndex } = parseLines(lines, i + 1);
+
+      //Add tags
+      nestedBlock.resumes = resumes;
+      nestedBlock.sortMap = sortMap;
+
+      block.lines.push(nestedBlock);
+      i = nextIndex;
+      continue;
     }
-    for (let r of resumes) outputs[r].push(content[i])
+
+    block.lines.push(rawLine);
+    i++;
   }
-  i++
+
+  return { block, nextIndex: i };
 }
 
-// For each resume, filter blocks by tag, sort by priority, then push lines to outputs
-for (let r of resumes) {
-  // Filter blocks included in this resume
-  let filtered = blocks.filter(b => checkTag(b.tag, r))
-
-  // Sort by priority for this resume or default to big number to keep stable order
-  filtered.sort((a, b) => {
-    const aPriority = a.sort && a.sort[r] != null ? a.sort[r] : 1e9
-    const bPriority = b.sort && b.sort[r] != null ? b.sort[r] : 1e9
-    return aPriority - bPriority
-  })
-
-  // Insert sorted blocks into output
-  for (let b of filtered) {
-    outputs[r].push(...b.lines)
+//Extracts resumes from the header of the file
+function extractResumesFromHeader(lines) {
+  let inBlock = false;
+  let header = [];
+  for (let line of lines) {
+    if (line.includes('% RESUMES START')) inBlock = true;
+    if (line.includes('% RESUMES END')) break;
+    if (inBlock) header.push(line);
   }
+  const line = header.find(l => l.includes('RESUMES:'));
+  if (!line) throw new Error('No RESUMES: line found');
+  return line.split(':')[1].split(',').map(x => x.trim());
 }
 
-for (let r of resumes) {
-  const name = r.replace(/\s+/g, '_') + '.tex'
-  fs.writeFileSync(outputDir + name, outputs[r].join('\n'))
+//Checks if a resume is included in the block
+function isResumeIncluded(block, targetResume) {
+  const include = block.resumes.include || ['*'];
+  const exclude = block.resumes.exclude || [];
+
+  const included = include.includes('*') || include.includes(targetResume);
+  const excluded = exclude.includes(targetResume);
+
+  return included && !excluded;
+}
+
+//Forms new resume
+function renderBlock(block, targetResume) {
+  let outputLines = [];
+
+  if (!isResumeIncluded(block, targetResume)) {
+    return [];
+  }
+
+  let buffer = [];
+
+  function outputBuffer() {
+    if (buffer.length === 0) return;
+      //Sort the buffer based on the sortMap
+    buffer.sort((a, b) => {
+      const aVal = a.sortMap?.[targetResume] ?? Infinity;
+      const bVal = b.sortMap?.[targetResume] ?? Infinity;
+      return aVal - bVal;
+    });
+
+    //Recurse on nested blocks
+    for (const nested of buffer) {
+      outputLines.push(...renderBlock(nested, targetResume));
+    }
+
+    buffer = [];
+  }
+
+  for (const item of block.lines) {
+    if (typeof item === 'string') {
+      //For a continuous series of blocks we sort and output them
+      outputBuffer();
+      //Push strings directly to output
+      outputLines.push(item);
+    } else if (typeof item === 'object' && item.lines) {
+      //If it's a block, we push it to the buffer until we are ready to sort it
+      buffer.push(item);
+    }
+  }
+
+  //Finalize if we have any remaining blocks
+  outputBuffer();
+
+  return outputLines;
+}
+
+
+const content = fs.readFileSync(mainFile, 'utf-8').split(/\r?\n/);
+const resumes = extractResumesFromHeader(content);
+const { block: tree } = parseLines(content);
+
+const testTag = parseResTag("%Res:{*}-{MechE}[");
+console.log('Test parsed ResTag:', testTag);
+
+if (!fs.existsSync('./Resumes')) fs.mkdirSync('./Resumes');
+
+for (const resume of resumes) {
+  const outputLines = renderBlock(tree, resume);
+  const outputText = outputLines.join('\n');
+  fs.writeFileSync(`./Resumes/${resume.replace(/\s+/g, '_')}.tex`, outputText, 'utf-8');
+  console.log(`Written resume file for: ${resume}`);
 }
