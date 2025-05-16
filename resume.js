@@ -7,7 +7,7 @@ if (!fs.existsSync(outputDir)) fs.mkdirSync(outputDir)
 
 const content = fs.readFileSync(mainFile, 'utf-8').split('\n')
 
-// Parse resume list
+// Parse resumes list
 let resumes = []
 let inResumeBlock = false
 for (let line of content) {
@@ -26,9 +26,8 @@ if (!resumes.length) throw 'No RESUMES: line found'
 let outputs = {}
 for (let r of resumes) outputs[r] = []
 
-let nextTag = null
-
 function checkTag(tag, resume) {
+  if (!tag) return true
   const [includeRaw, excludeRaw] = tag.split('-')
   const includes = includeRaw ? includeRaw.slice(1, -1).split(',').map(s => s.trim()) : ['*']
   const excludes = excludeRaw ? excludeRaw.slice(1, -1).split(',').map(s => s.trim()) : []
@@ -36,32 +35,85 @@ function checkTag(tag, resume) {
   return (includeAll || includes.includes(resume)) && !excludes.includes(resume)
 }
 
-for (let i = 0; i < content.length; i++) {
-  const line = content[i]
-  const trimmed = line.trim()
+function parseSortLine(str) {
+  const out = {}
+  str.split(',').forEach(pair => {
+    const [k, v] = pair.split(':').map(s => s.trim())
+    out[k] = Number(v)
+  })
+  return out
+}
 
-  if (trimmed.startsWith('%Res:')) {
-    const tagMatch = trimmed.match(/^%Res:\s*({[^}]+}(?:-\{[^}]+\})?)/)
-    if (!tagMatch) continue
-    nextTag = tagMatch[1].trim()
+let blocks = []
+let i = 0
+while (i < content.length) {
+  const line = content[i].trim()
 
-    let block = []
+  if (line.startsWith('%Res:') || line.startsWith('%Sort:')) {
+    let tag = null
+    let sort = null
+
+    if (line.startsWith('%Res:')) {
+      const tagMatch = line.match(/^%Res:\s*({[^}]+}(?:-\{[^}]+\})?)/)
+      if (tagMatch) tag = tagMatch[1]
+      const sortMatch = line.match(/%Sort:\s*{([^}]+)}/)
+      if (sortMatch) sort = parseSortLine(sortMatch[1])
+    } else {
+      const sortMatch = line.match(/^%Sort:\s*{([^}]+)}/)
+      if (sortMatch) sort = parseSortLine(sortMatch[1])
+      tag = '{*}'
+    }
+
     i++
-    while (i < content.length) {
-      const l = content[i]
-      const t = l.trim()
-      if (t === '' || t.startsWith('%Res:') || t.startsWith('%')) break
-      block.push(l)
+    let blockLines = []
+    while (
+      i < content.length &&
+      content[i].trim() !== '' &&
+      !content[i].trim().startsWith('%Res:') &&
+      !content[i].trim().startsWith('%Sort:') &&
+      !content[i].trim().toLowerCase().includes("end")
+    ) {
+      blockLines.push(content[i])
       i++
     }
     i--
 
-    for (let r of resumes) {
-      if (checkTag(nextTag, r)) outputs[r].push(...block)
+    blocks.push({ tag, sort, lines: blockLines })
+  } 
+  else {
+    // flush accumulated blocks before processing normal line
+    if (blocks.length) {
+      for (let r of resumes) {
+        let included = blocks.filter(b => checkTag(b.tag, r))
+        included.sort((a, b) => {
+          const ap = a.sort && a.sort[r] != null ? a.sort[r] : 1e9
+          const bp = b.sort && b.sort[r] != null ? b.sort[r] : 1e9
+          return ap - bp
+        })
+        for (let b of included) outputs[r].push(...b.lines)
+      }
+      blocks = []
     }
-    nextTag = null
-  } else {
-    for (let r of resumes) outputs[r].push(line)
+    for (let r of resumes) outputs[r].push(content[i])
+  }
+  i++
+}
+
+// For each resume, filter blocks by tag, sort by priority, then push lines to outputs
+for (let r of resumes) {
+  // Filter blocks included in this resume
+  let filtered = blocks.filter(b => checkTag(b.tag, r))
+
+  // Sort by priority for this resume or default to big number to keep stable order
+  filtered.sort((a, b) => {
+    const aPriority = a.sort && a.sort[r] != null ? a.sort[r] : 1e9
+    const bPriority = b.sort && b.sort[r] != null ? b.sort[r] : 1e9
+    return aPriority - bPriority
+  })
+
+  // Insert sorted blocks into output
+  for (let b of filtered) {
+    outputs[r].push(...b.lines)
   }
 }
 
