@@ -1,39 +1,47 @@
 const fs = require('fs');
 const mainFile = 'main.tex';
 
-//Parses a line's inclusion in each resume
-function parseResTag(line) {
-  const match = line.match(/^%Res:\s*\{([^}]*)\}(?:\s*-\s*\{([^}]*)\})?\s*\[\s*$/);
+//Parses a line's tags in each resume for sorting and filtering
+// %Res: {include} - {exclude} Sort: {key:value, ...}
+function parseTagLine(line) {
+  const match = line.match(
+    /^%(?:(Res):\s*\{([^}]*)\}(?:\s*-\s*\{([^}]*)\})?)?\s*(?:(Sort):\s*\{([^}]*)\})?\s*\[\s*$/
+  );
   if (!match) return null;
 
-  const include = match[1].split(',').map(s => s.trim()).filter(Boolean);
-  const exclude = match[2] ? match[2].split(',').map(s => s.trim()).filter(Boolean) : [];
+  let resumes = { include: new Set(['*']), exclude: new Set() };
+  let sortMap = {};
 
-  return { include, exclude };
-}
-
-//Parses a line's sorted order for each resume
-function parseSortTag(line) {
-  const match = line.match(/^%Sort:\s*\{([^}]*)\}\s*\[\s*$/);
-  if (!match) return null;
-
-  const raw = match[1].split(',');
-  let out = {};
-  for (let kv of raw) {
-    let [k, v] = kv.split(':').map(s => s.trim());
-    if (k && v) out[k] = parseInt(v);
+  if (match[1] === 'Res') {
+    const include = match[2]?.split(',').map(s => s.trim()).filter(Boolean) || ['*'];
+    const exclude = match[3]?.split(',').map(s => s.trim()).filter(Boolean) || [];
+    resumes = {
+      include: new Set(include),
+      exclude: new Set(exclude),
+    };
   }
-  return out;
+
+  if (match[4] === 'Sort') {
+    const rawSort = match[5]?.split(',') || [];
+    for (const kv of rawSort) {
+      const [k, v] = kv.split(':').map(s => s.trim());
+      if (k && v !== undefined) sortMap[k] = parseInt(v);
+    }
+  }
+
+  return { resumes, sortMap };
 }
 
 //Creates a block object with resumes and sortMap
-function createBlock(resumes = ['*'], sortMap = {}) {
+function createBlock(include = new Set(['*']), exclude = new Set(), sortMap = {}) {
   return {
-    resumes: { include: resumes, exclude: [] },
+    resumes: include,
+    exclude: exclude,
     sortMap,
     lines: [],
   };
 }
+
 
 //Parses the lines of the file into a block tree structure
 function parseLines(lines, startIndex = 0) {
@@ -44,39 +52,24 @@ function parseLines(lines, startIndex = 0) {
     const rawLine = lines[i];
     const line = rawLine.trim();
 
-    //Checks for block end
     if (line === '%]') {
       return { block, nextIndex: i + 1 };
     }
-
-    //Checks for block start
-    if (line.startsWith('%Res:') || line.startsWith('%Sort:')) {
-      let resumes = { include: ['*'], exclude: [] };
-      let sortMap = {};
-
-      if (line.startsWith('%Res:')) {
-        const parsedResumes = parseResTag(line);
-        if (parsedResumes) resumes = parsedResumes;
-      } 
-      else if (line.startsWith('%Sort:')) {
-        const parsedSortMap = parseSortTag(line);
-        if (parsedSortMap) sortMap = parsedSortMap;
-      }
-
-      //Add lines to the block until it ends
+    else if (line.startsWith('%Res:') || line.startsWith('%Sort:')) {
+      const { resumes, sortMap } = parseTagLine(line);
       const { block: nestedBlock, nextIndex } = parseLines(lines, i + 1);
 
-      //Add tags
-      nestedBlock.resumes = resumes;
+      nestedBlock.resumes = resumes.include;
+      nestedBlock.exclude = resumes.exclude;
       nestedBlock.sortMap = sortMap;
 
       block.lines.push(nestedBlock);
       i = nextIndex;
-      continue;
     }
-
-    block.lines.push(rawLine);
-    i++;
+    else{
+      block.lines.push(rawLine);
+      i++;
+    }
   }
 
   return { block, nextIndex: i };
@@ -98,14 +91,15 @@ function extractResumesFromHeader(lines) {
 
 //Checks if a resume is included in the block
 function isResumeIncluded(block, targetResume) {
-  const include = block.resumes.include || ['*'];
-  const exclude = block.resumes.exclude || [];
+  const include = block.resumes || new Set(['*']);
+  const exclude = block.exclude || new Set();
 
-  const included = include.includes('*') || include.includes(targetResume);
-  const excluded = exclude.includes(targetResume);
+  const included = include.has('*') || include.has(targetResume);
+  const excluded = exclude.has(targetResume);
 
   return included && !excluded;
 }
+
 
 //Forms new resume
 function renderBlock(block, targetResume) {
@@ -156,9 +150,6 @@ function renderBlock(block, targetResume) {
 const content = fs.readFileSync(mainFile, 'utf-8').split(/\r?\n/);
 const resumes = extractResumesFromHeader(content);
 const { block: tree } = parseLines(content);
-
-const testTag = parseResTag("%Res:{*}-{MechE}[");
-console.log('Test parsed ResTag:', testTag);
 
 if (!fs.existsSync('./Resumes')) fs.mkdirSync('./Resumes');
 
