@@ -74,6 +74,10 @@ Resumes/         # Output directory for generated .tex files
 - `%]`  
   Marks the end of the current block.
 
+### Example
+
+and example file is provided as mainexample.tex
+
 ## License
 
 MIT License. See `LICENSE` file for details.
